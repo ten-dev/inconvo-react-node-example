@@ -1,0 +1,187 @@
+/* Target the Assistant component's root div */
+#root > div {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  margin-bottom: 5vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Chart container and caption styles */
+.chart-container {
+  display: flex;
+  width: 60%;
+  flex-direction: column;
+  align-items: center;
+  margin: 15px 0;
+}
+
+/* Style the section containing the AnswerOutput */
+#root > div > section {
+  min-height: 50vh;
+  height: 70vh;
+  margin: 20px;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  width: 80%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2; /* Ensure the section stays above the form */
+}
+
+/* Style the form that follows the section */
+#root > div > form {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 10vh;
+  width: 80%;
+  max-width: 800px;
+  z-index: 1;
+  position: relative; /* Ensure positioning context */
+}
+
+/* Keep existing styles for other elements */
+label {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  margin-right: 10px;
+}
+
+label > input {
+  flex: 1;
+  height: 3vh;
+  min-width: 100px;
+  margin-left: 10px;
+}
+
+button {
+  flex-shrink: 0;
+  height: 4vh;
+  width: auto;
+  padding: 0 5px;
+}
+
+/* Styles for different answer states */
+.empty-answer,
+.error-answer,
+.text-answer,
+.unknown-answer {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.empty-answer {
+  color: #666;
+  font-style: italic;
+}
+
+.error-answer {
+  color: #d32f2f;
+  background-color: #ffebee;
+  border-left: 3px solid #d32f2f;
+}
+
+.text-answer {
+  background-color: #f5f5f5;
+  border-left: 3px solid #2196f3;
+}
+
+.unknown-answer {
+  color: #ff9800;
+  background-color: #fff8e1;
+  border-left: 3px solid #ff9800;
+}
+
+/* Conversation history styling */
+.conversation-history {
+  width: 100%;
+}
+
+.qa-pair {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.question-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.question {
+  max-width: 80%;
+  padding: 8px 12px;
+  background-color: #e1e1e1;
+  border-radius: 15px 15px 0 15px;
+  margin: 0;
+}
+
+.answer-container {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.answer-container > div {
+  max-width: 80%;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border-radius: 15px 15px 15px 0;
+}
+
+hr {
+  margin: 15px 0;
+  border: 0;
+  height: 1px;
+  background-color: #e0e0e0;
+  width: 100%;
+}
+
+/* Table styling */
+table {
+  border-collapse: collapse;
+  margin: 15px 0;
+  width: 60%;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th {
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: bold;
+}
+
+td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #f5f5f5;
+}
+
+/* Make sure the table looks good in the answer container */
+.answer-container table {
+  max-width: 100%;
+  margin: 10px 0;
+}
+
+caption {
+  background-color: #f5f5f5;
+  margin-bottom: 10px;
+}
