@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Get an API key.
+Get an [API key](https://app.inconvo.ai).
 
 ## Running the sample
 
