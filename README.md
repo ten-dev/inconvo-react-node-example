@@ -1,4 +1,4 @@
-# Build an analytics assistant with the Inconvo Ask API
+# Build an analytics assistant with the Inconvo Conversations API
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ npm install
 npm start
 ```
 
-3. Go to [http://localhost:3000](http://localhost:3000)
+3. Go to [http://localhost:3232](http://localhost:3232)
 
 ## Sample questions
 
