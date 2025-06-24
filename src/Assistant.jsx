@@ -103,7 +103,7 @@ const Assistant = () => {
         question,
         ...(conversationId ? { conversationId } : {}),
       });
-      const res = await fetch(`http://localhost:4242/create-answer`, {
+      const res = await fetch(`http://localhost:4242/create-response`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
