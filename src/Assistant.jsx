@@ -91,6 +91,7 @@ const Assistant = () => {
   const resetConversation = () => {
     setQuestion("");
     setQaPairs([]);
+    setConversationId(null);
   };
 
   const handleSubmit = async (e) => {
