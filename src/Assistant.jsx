@@ -186,7 +186,7 @@ const Assistant = () => {
           isLoading={isLoading}
           conversationId={conversationId}
         />
-        <button disabled={isLoading | !conversationId} id="submit">
+        <button disabled={isLoading || !conversationId} id="submit">
           {isLoading ? `Thinking ...` : `Submit`}
         </button>
       </form>
