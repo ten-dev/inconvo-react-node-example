@@ -167,7 +167,7 @@ const Assistant = () => {
         {messageResponsePairs.length > 0 && (
           <div className="conversation-history">
             {messageResponsePairs.map((messageResponsePair, index) => (
-              <div key={index} className="io-pair">
+              <div key={index} className="message-response-pair">
                 <div className="message-container">
                   <p className="message">{messageResponsePair.message}</p>
                 </div>
