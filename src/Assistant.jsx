@@ -92,14 +92,10 @@ const Assistant = () => {
   const [conversationId, setConversationId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const newConversation = async () => {
+  const createNewConversation = async () => {
     setConversationId(null);
     setMessage("");
     setMessageResponsePairs([]);
-    await createConversation();
-  };
-
-  const createConversation = async () => {
     try {
       const res = await fetch(`http://localhost:4242/create-conversation`, {
         method: "POST",
@@ -158,7 +154,7 @@ const Assistant = () => {
   return (
     <div>
       <div style={{ textAlign: "center" }}>
-        <button onClick={newConversation}>New conversation</button>
+        <button onClick={createNewConversation}>New conversation</button>
         {conversationId && (
           <div className="conversation-id">{conversationId}</div>
         )}
