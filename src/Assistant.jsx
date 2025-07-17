@@ -159,7 +159,9 @@ const Assistant = () => {
     <div>
       <div style={{ textAlign: "center" }}>
         <button onClick={newConversation}>New conversation</button>
-        {conversationId && <div class="conversation-id">{conversationId}</div>}
+        {conversationId && (
+          <div className="conversation-id">{conversationId}</div>
+        )}
       </div>
       <section>
         {ioPairs.length > 0 && (
