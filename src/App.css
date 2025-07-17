@@ -112,8 +112,8 @@ button {
 }
 
 .conversation-id {
-  margintop: "15px";
-  marginbottom: "10px";
+  margintop: 15px;
+  marginbottom: 10px;
 }
 
 .io-pair {

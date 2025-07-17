@@ -92,11 +92,11 @@ const Assistant = () => {
   const [conversationId, setConversationId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const newConversation = () => {
+  const newConversation = async () => {
     setConversationId(null);
     setMessage("");
     setIoPairs([]);
-    createConversation();
+    await createConversation();
   };
 
   const createConversation = async () => {
