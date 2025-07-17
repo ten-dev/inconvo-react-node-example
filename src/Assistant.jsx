@@ -3,24 +3,19 @@ import "./App.css";
 import { BarChart, LineChart } from "react-chartkick";
 import "chartkick/chart.js";
 
-const QuestionInput = ({
-  question,
-  setQuestion,
-  isLoading,
-  conversationId,
-}) => {
+const MessageInput = ({ message, setMessage, isLoading, conversationId }) => {
   const handleChange = (e) => {
-    setQuestion(e.target.value);
+    setMessage(e.target.value);
   };
 
   return (
     <label>
       Enter message:
       <input
-        id="question"
+        id="message"
         type="text"
         disabled={!conversationId || isLoading}
-        value={question}
+        value={message}
         onChange={handleChange}
         placeholder={
           conversationId
@@ -32,28 +27,28 @@ const QuestionInput = ({
   );
 };
 
-const AnswerOutput = ({ answer }) => {
-  if (!answer || Object.keys(answer).length === 0) {
-    return <div>Ask a question to see the answer here</div>;
+const ResponseOutput = ({ response }) => {
+  if (!response || Object.keys(response).length === 0) {
+    return <div>Send a message to see a response here</div>;
   }
 
-  switch (answer.type) {
+  switch (response.type) {
     case "text":
-      return <div>{answer.message}</div>;
+      return <div>{response.message}</div>;
 
     case "table":
       return (
         <table>
-          <caption>{answer.message}</caption>
+          <caption>{response.message}</caption>
           <thead>
             <tr>
-              {answer.table.head.map((h, i) => (
+              {response.table.head.map((h, i) => (
                 <th key={i}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {answer.table.body.map((row, i) => (
+            {response.table.body.map((row, i) => (
               <tr key={i}>
                 {row.map((cell, j) => (
                   <td key={j}>{cell}</td>
@@ -65,19 +60,19 @@ const AnswerOutput = ({ answer }) => {
       );
 
     case "chart": {
-      const data = answer.chart.data.map((item) => [item.label, item.value]);
-      switch (answer.chart.type) {
+      const data = response.chart.data.map((item) => [item.label, item.value]);
+      switch (response.chart.type) {
         case "bar":
           return (
             <div className="chart-container">
-              <div>{answer.message}</div>
+              <div>{response.message}</div>
               <BarChart data={data} round={2} thousands="," width="400px" />
             </div>
           );
         case "line":
           return (
             <div className="chart-container">
-              <div>{answer.message}</div>
+              <div>{response.message}</div>
               <LineChart data={data} round={2} thousands="," width="400px" />
             </div>
           );
@@ -87,20 +82,21 @@ const AnswerOutput = ({ answer }) => {
     }
 
     default:
-      return <div>Unsupported answer type</div>;
+      return <div>Unsupported response type</div>;
   }
 };
 
 const Assistant = () => {
-  const [question, setQuestion] = useState("");
-  const [qaPairs, setQaPairs] = useState([]);
+  const [message, setMessage] = useState("");
+  const [ioPairs, setIoPairs] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const resetConversation = () => {
-    setQuestion("");
-    setQaPairs([]);
+  const newConversation = () => {
     setConversationId(null);
+    setMessage("");
+    setIoPairs([]);
+    createConversation();
   };
 
   const createConversation = async () => {
@@ -120,9 +116,9 @@ const Assistant = () => {
     setIsLoading(true);
 
     try {
-      console.log("Submitting question:", question);
+      console.log("Submitting message:", message);
       console.log("Payload:", {
-        question,
+        message,
         ...(conversationId ? { conversationId } : {}),
       });
       const res = await fetch(`http://localhost:4242/create-response`, {
@@ -131,7 +127,7 @@ const Assistant = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          question,
+          message,
           ...(conversationId ? { conversationId } : {}),
         }),
       });
@@ -147,12 +143,15 @@ const Assistant = () => {
         setConversationId(data.conversationId);
       }
 
-      setQaPairs((prevQaPairs) => [...prevQaPairs, { question, answer: data }]);
+      setIoPairs((prevIoPairs) => [
+        ...prevIoPairs,
+        { message, response: data },
+      ]);
     } catch (err) {
-      console.error("Error submitting question:", err);
+      console.error("Error submitting message:", err);
     } finally {
       setIsLoading(false);
-      setQuestion("");
+      setMessage("");
     }
   };
 
@@ -160,17 +159,17 @@ const Assistant = () => {
     <div>
       {conversationId ?? conversationId}
 
-      <button onClick={createConversation}>New conversation</button>
+      <button onClick={newConversation}>New conversation</button>
       <section>
-        {qaPairs.length > 0 && (
+        {ioPairs.length > 0 && (
           <div className="conversation-history">
-            {qaPairs.map((qaPair, index) => (
-              <div key={index} className="qa-pair">
-                <div className="question-container">
-                  <p className="question">{qaPair.question}</p>
+            {ioPairs.map((ioPair, index) => (
+              <div key={index} className="io-pair">
+                <div className="message-container">
+                  <p className="message">{ioPair.message}</p>
                 </div>
-                <div className="answer-container">
-                  <AnswerOutput answer={qaPair.answer} />
+                <div className="response-container">
+                  <ResponseOutput response={ioPair.response} />
                 </div>
               </div>
             ))}
@@ -178,9 +177,9 @@ const Assistant = () => {
         )}
       </section>
       <form onSubmit={handleSubmit}>
-        <QuestionInput
-          question={question}
-          setQuestion={setQuestion}
+        <MessageInput
+          message={message}
+          setMessage={setMessage}
           isLoading={isLoading}
           conversationId={conversationId}
         />
