@@ -15,9 +15,7 @@ app.use(
 app.use(express.static("public"));
 app.use(express.json()); // Add this to parse JSON request bodies
 
-app.post("/create-response", async (req, res) => {
-  const { question, conversationId } = req.body;
-
+app.post("/create-conversation", async (_req, res) => {
   // This is placeholder context for the sample data.
   // In a real application, you would fetch this from your database or other trust source.
   const context = {
@@ -25,37 +23,8 @@ app.post("/create-response", async (req, res) => {
   };
 
   try {
-    let currentConversationId = conversationId;
-
-    // If no conversationId, create a new conversation first
-    if (!currentConversationId) {
-      const conversationResponse = await fetch(
-        `${process.env.INCONVO_API_BASE_URL}/conversations/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.INCONVO_API_KEY}`,
-          },
-          body: JSON.stringify({
-            context,
-          }),
-        }
-      );
-
-      if (!conversationResponse.ok) {
-        throw new Error(
-          `Failed to create conversation: ${conversationResponse.status}`
-        );
-      }
-
-      const conversationData = await conversationResponse.json();
-      currentConversationId = conversationData.id;
-    }
-
-    // Now create the response
     const response = await fetch(
-      `${process.env.INCONVO_API_BASE_URL}/conversations/${currentConversationId}/response/`,
+      `${process.env.INCONVO_API_BASE_URL}/conversations/`,
       {
         method: "POST",
         headers: {
@@ -63,7 +32,36 @@ app.post("/create-response", async (req, res) => {
           Authorization: `Bearer ${process.env.INCONVO_API_KEY}`,
         },
         body: JSON.stringify({
-          message: question,
+          context,
+        }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to create conversation: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log(data);
+    res.json(data);
+  } catch (error) {
+    console.error("Error creating conversation:", error);
+    res.status(500).json({ error: "Failed to create conversation" });
+  }
+});
+
+app.post("/create-response", async (req, res) => {
+  const { message, conversationId } = req.body;
+
+  try {
+    const response = await fetch(
+      `${process.env.INCONVO_API_BASE_URL}/conversations/${conversationId}/response/`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.INCONVO_API_KEY}`,
+        },
+        body: JSON.stringify({
+          message,
         }),
       }
     );
@@ -73,12 +71,7 @@ app.post("/create-response", async (req, res) => {
     }
 
     const inconvoResponse = await response.json();
-
-    // Include the conversationId in the response
-    res.json({
-      ...inconvoResponse,
-      conversationId: currentConversationId,
-    });
+    res.json(inconvoResponse);
   } catch (error) {
     console.error("Error from Inconvo AI:", error);
     res.status(500).json({ error: "Failed to get response from Inconvo AI" });

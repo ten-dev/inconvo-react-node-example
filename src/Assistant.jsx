@@ -3,21 +3,30 @@ import "./App.css";
 import { BarChart, LineChart } from "react-chartkick";
 import "chartkick/chart.js";
 
-const QuestionInput = ({ question, setQuestion, isLoading }) => {
+const QuestionInput = ({
+  question,
+  setQuestion,
+  isLoading,
+  conversationId,
+}) => {
   const handleChange = (e) => {
     setQuestion(e.target.value);
   };
 
   return (
     <label>
-      Enter your question:
+      Enter message:
       <input
         id="question"
         type="text"
-        disabled={isLoading}
+        disabled={!conversationId || isLoading}
         value={question}
         onChange={handleChange}
-        placeholder="What is our most popular product?"
+        placeholder={
+          conversationId
+            ? "What is our most popular product?"
+            : "Start a new conversation"
+        }
       />
     </label>
   );
@@ -94,6 +103,18 @@ const Assistant = () => {
     setConversationId(null);
   };
 
+  const createConversation = async () => {
+    try {
+      const res = await fetch(`http://localhost:4242/create-conversation`, {
+        method: "POST",
+      });
+      const conversation = await res.json();
+      setConversationId(conversation.id);
+    } catch (err) {
+      console.error("Error creating conversation:", err);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -137,7 +158,9 @@ const Assistant = () => {
 
   return (
     <div>
-      <button onClick={resetConversation}>New conversation</button>
+      {conversationId ?? conversationId}
+
+      <button onClick={createConversation}>New conversation</button>
       <section>
         {qaPairs.length > 0 && (
           <div className="conversation-history">
@@ -159,9 +182,10 @@ const Assistant = () => {
           question={question}
           setQuestion={setQuestion}
           isLoading={isLoading}
+          conversationId={conversationId}
         />
-        <button disabled={isLoading} id="submit">
-          {isLoading ? `Thinking ...` : `Ask`}
+        <button disabled={isLoading | !conversationId} id="submit">
+          {isLoading ? `Thinking ...` : `Submit`}
         </button>
       </form>
     </div>
