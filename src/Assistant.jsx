@@ -157,9 +157,14 @@ const Assistant = () => {
 
   return (
     <div>
-      {conversationId ?? conversationId}
-
-      <button onClick={newConversation}>New conversation</button>
+      <div style={{ textAlign: 'center' }}>
+        <button onClick={newConversation}>New conversation</button>
+        {conversationId && (
+          <div style={{ marginTop: '15px', marginBottom: '10px' }}>
+            {conversationId}
+          </div>
+        )}
+      </div>
       <section>
         {ioPairs.length > 0 && (
           <div className="conversation-history">
