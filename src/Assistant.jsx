@@ -88,14 +88,14 @@ const ResponseOutput = ({ response }) => {
 
 const Assistant = () => {
   const [message, setMessage] = useState("");
-  const [ioPairs, setIoPairs] = useState([]);
+  const [messageResponsePairs, setMessageResponsePairs] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const newConversation = async () => {
     setConversationId(null);
     setMessage("");
-    setIoPairs([]);
+    setMessageResponsePairs([]);
     await createConversation();
   };
 
@@ -143,8 +143,8 @@ const Assistant = () => {
         setConversationId(data.conversationId);
       }
 
-      setIoPairs((prevIoPairs) => [
-        ...prevIoPairs,
+      setMessageResponsePairs((prevMessageResponsePairs) => [
+        ...prevMessageResponsePairs,
         { message, response: data },
       ]);
     } catch (err) {
@@ -164,15 +164,15 @@ const Assistant = () => {
         )}
       </div>
       <section>
-        {ioPairs.length > 0 && (
+        {messageResponsePairs.length > 0 && (
           <div className="conversation-history">
-            {ioPairs.map((ioPair, index) => (
+            {messageResponsePairs.map((messageResponsePair, index) => (
               <div key={index} className="io-pair">
                 <div className="message-container">
-                  <p className="message">{ioPair.message}</p>
+                  <p className="message">{messageResponsePair.message}</p>
                 </div>
                 <div className="response-container">
-                  <ResponseOutput response={ioPair.response} />
+                  <ResponseOutput response={messageResponsePair.response} />
                 </div>
               </div>
             ))}
