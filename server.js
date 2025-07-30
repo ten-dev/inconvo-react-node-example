@@ -15,7 +15,13 @@ app.use(
 app.use(express.static("public"));
 app.use(express.json()); // Add this to parse JSON request bodies
 
-app.post("/create-conversation", async (_req, res) => {
+// Express 5 error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
+app.post("/create-conversation", async (_req, res, next) => {
   // This is placeholder context for the sample data.
   // In a real application, you would fetch this from your database or other trust source.
   const context = {
@@ -44,11 +50,11 @@ app.post("/create-conversation", async (_req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Error creating conversation:", error);
-    res.status(500).json({ error: "Failed to create conversation" });
+    next(error); // Pass error to Express 5 error handler
   }
 });
 
-app.post("/create-response", async (req, res) => {
+app.post("/create-response", async (req, res, next) => {
   const { message, conversationId } = req.body;
 
   try {
@@ -74,14 +80,14 @@ app.post("/create-response", async (req, res) => {
     res.json(inconvoResponse);
   } catch (error) {
     console.error("Error from Inconvo AI:", error);
-    res.status(500).json({ error: "Failed to get response from Inconvo AI" });
+    next(error); // Pass error to Express 5 error handler
   }
 });
 
 // Create feedback endpoint
 app.post(
   "/conversations/:conversationId/response/:responseId/feedback",
-  async (req, res) => {
+  async (req, res, next) => {
     const { conversationId, responseId } = req.params;
     const { rating, comment } = req.body;
 
@@ -109,7 +115,7 @@ app.post(
       res.json(feedback);
     } catch (error) {
       console.error("Error creating feedback:", error);
-      res.status(500).json({ error: "Failed to create feedback" });
+      next(error); // Pass error to Express 5 error handler
     }
   }
 );
@@ -117,7 +123,7 @@ app.post(
 // Update feedback endpoint
 app.patch(
   "/conversations/:conversationId/response/:responseId/feedback/:feedbackId",
-  async (req, res) => {
+  async (req, res, next) => {
     const { conversationId, responseId, feedbackId } = req.params;
     const { rating, comment } = req.body;
 
@@ -145,9 +151,36 @@ app.patch(
       res.json(feedback);
     } catch (error) {
       console.error("Error updating feedback:", error);
-      res.status(500).json({ error: "Failed to update feedback" });
+      next(error); // Pass error to Express 5 error handler
     }
   }
 );
+
+// Express 5 enhanced error handling middleware (must be after all routes)
+app.use((err, req, res, next) => {
+  console.error("Error details:", {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+  });
+
+  // Determine appropriate status code
+  const statusCode = err.statusCode || err.status || 500;
+
+  // Send error response
+  res.status(statusCode).json({
+    error:
+      process.env.NODE_ENV === "production"
+        ? "Something went wrong"
+        : err.message,
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+  });
+});
+
+// 404 handler for unmatched routes
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
 
 app.listen(4242, () => console.log("Running on port 4242"));

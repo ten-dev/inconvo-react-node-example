@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import "./App.css";
 import { BarChart, LineChart } from "react-chartkick";
 import "chartkick/chart.js";
@@ -82,6 +82,7 @@ const ResponseOutput = ({ response }) => {
     }
 
     default:
+      console.error("Unsupported response type:", response.type);
       return <div>Unsupported response type</div>;
   }
 };
