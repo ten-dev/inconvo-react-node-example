@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import Inconvo from "inconvo";
-import { Readable } from "stream";
 
 dotenv.config();
 const app = express();
@@ -60,36 +59,28 @@ app.post("/create-response", async (req, res, next) => {
         "Access-Control-Allow-Headers": "Cache-Control",
       });
 
-      console.log(
-        "Starting streaming response for conversation:",
-        conversationId
-      );
-
-      // Get the raw Response object to access the streaming body
-      const response = await client.conversations.response
-        .create(conversationId, {
+      const streamResponse = client.conversations.response.create(
+        conversationId,
+        {
           message: message,
           stream: true,
-        })
-        .asResponse();
+        }
+      );
 
-      if (!response.body) {
-        throw new Error("No response body received");
-      }
-
-      const nodeStream = Readable.fromWeb(response.body);
-      nodeStream.pipe(res, { end: false });
-
-      nodeStream.on("end", () => {
-        console.log("Finished processing all chunks");
+      try {
+        for await (const chunk of streamResponse) {
+          console.log(chunk);
+          // Format the response objects as Server-Sent Events
+          const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
+          res.write(sseMessage);
+        }
+        // Send the done event
+        res.write("data: [DONE]\n\n");
         res.end();
-      });
-
-      nodeStream.on("error", (error) => {
-        console.error("Stream error:", error);
+      } catch (error) {
         res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
         res.end();
-      });
+      }
     } else {
       const response = await client.conversations.response.create(
         conversationId,

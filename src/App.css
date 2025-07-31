@@ -97,7 +97,7 @@ button {
 
 .text-answer {
   background-color: #f5f5f5;
-  border-left: 3px solid #2196f3;
+  border-left: 3px solid #666;
 }
 
 .unknown-answer {
@@ -199,33 +199,12 @@ caption {
   padding: 12px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  border-left: 3px solid #007bff;
 }
 
 .streaming-status {
-  font-weight: bold;
-  color: #007bff;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
-}
-
-.streaming-status::after {
-  content: '';
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  margin-left: 8px;
-  border: 2px solid #007bff;
-  border-radius: 50%;
-  border-top-color: transparent;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .streaming-steps {
