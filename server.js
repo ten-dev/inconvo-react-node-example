@@ -1,14 +1,22 @@
 // Load environment variables from .env file
-require("dotenv").config();
+import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import Inconvo from "inconvo";
+import { Readable } from "stream";
 
-const express = require("express");
+dotenv.config();
 const app = express();
 
-// Add these lines to enable CORS
-const cors = require("cors");
+const client = new Inconvo({
+  baseURL: process.env.INCONVO_API_BASE_URL,
+  apiKey: process.env.INCONVO_API_KEY,
+});
+
+// Allow requests from your React app
 app.use(
   cors({
-    origin: "http://localhost:3232", // Allow requests from your React app
+    origin: "http://localhost:3232",
   })
 );
 
@@ -29,58 +37,75 @@ app.post("/create-conversation", async (_req, res, next) => {
   };
 
   try {
-    const response = await fetch(
-      `${process.env.INCONVO_API_BASE_URL}/conversations/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.INCONVO_API_KEY}`,
-        },
-        body: JSON.stringify({
-          context,
-        }),
-      }
-    );
-    if (!response.ok) {
-      throw new Error(`Failed to create conversation: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log(data);
-    res.json(data);
+    const conversation = await client.conversations.create({
+      context: context,
+    });
+    return res.json(conversation);
   } catch (error) {
-    console.error("Error creating conversation:", error);
-    next(error); // Pass error to Express 5 error handler
+    next(error);
   }
 });
 
 app.post("/create-response", async (req, res, next) => {
-  const { message, conversationId } = req.body;
+  const { message, conversationId, stream = false } = req.body;
 
   try {
-    const response = await fetch(
-      `${process.env.INCONVO_API_BASE_URL}/conversations/${conversationId}/response/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.INCONVO_API_KEY}`,
-        },
-        body: JSON.stringify({
-          message,
-        }),
+    if (stream) {
+      // Set headers for Server-Sent Events
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "Access-Control-Allow-Origin": "http://localhost:3232",
+        "Access-Control-Allow-Headers": "Cache-Control",
+      });
+
+      console.log(
+        "Starting streaming response for conversation:",
+        conversationId
+      );
+
+      // Get the raw Response object to access the streaming body
+      const response = await client.conversations.response
+        .create(conversationId, {
+          message: message,
+          stream: true,
+        })
+        .asResponse();
+
+      if (!response.body) {
+        throw new Error("No response body received");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`Failed to create response: ${response.status}`);
+      const nodeStream = Readable.fromWeb(response.body);
+      nodeStream.pipe(res, { end: false });
+
+      nodeStream.on("end", () => {
+        console.log("Finished processing all chunks");
+        res.end();
+      });
+
+      nodeStream.on("error", (error) => {
+        console.error("Stream error:", error);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
+      });
+    } else {
+      const response = await client.conversations.response.create(
+        conversationId,
+        {
+          message: message,
+        }
+      );
+      return res.json(response);
     }
-
-    const inconvoResponse = await response.json();
-    res.json(inconvoResponse);
   } catch (error) {
-    console.error("Error from Inconvo AI:", error);
-    next(error); // Pass error to Express 5 error handler
+    if (stream) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    } else {
+      next(error);
+    }
   }
 });
 
@@ -92,26 +117,12 @@ app.post(
     const { rating, comment } = req.body;
 
     try {
-      const response = await fetch(
-        `${process.env.INCONVO_API_BASE_URL}/conversations/${conversationId}/response/${responseId}/feedback/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.INCONVO_API_KEY}`,
-          },
-          body: JSON.stringify({
-            rating,
-            comment,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to create feedback: ${response.status}`);
-      }
-
-      const feedback = await response.json();
+      const feedback = await client.conversations.response.feedback.create({
+        conversationId,
+        responseId,
+        rating,
+        comment,
+      });
       res.json(feedback);
     } catch (error) {
       console.error("Error creating feedback:", error);
@@ -128,26 +139,13 @@ app.patch(
     const { rating, comment } = req.body;
 
     try {
-      const response = await fetch(
-        `${process.env.INCONVO_API_BASE_URL}/conversations/${conversationId}/response/${responseId}/feedback/${feedbackId}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.INCONVO_API_KEY}`,
-          },
-          body: JSON.stringify({
-            rating,
-            comment,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to update feedback: ${response.status}`);
-      }
-
-      const feedback = await response.json();
+      const feedback = await client.conversations.response.feedback.update({
+        conversationId,
+        responseId,
+        feedbackId,
+        rating,
+        comment,
+      });
       res.json(feedback);
     } catch (error) {
       console.error("Error updating feedback:", error);

@@ -2,6 +2,7 @@
   "name": "inconvo-react-node-example",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "chart.js": "^4.5.0",
     "cors": "^2.8.5",

@@ -112,8 +112,8 @@ button {
 }
 
 .conversation-id {
-  margintop: 15px;
-  marginbottom: 10px;
+  margin-top: 15px;
+  margin-bottom: 10px;
 }
 
 .message-response-pair {
@@ -192,4 +192,55 @@ tbody tr:nth-child(even) {
 caption {
   background-color: #f5f5f5;
   margin-bottom: 10px;
+}
+
+/* Streaming UI styles */
+.streaming-container {
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #007bff;
+}
+
+.streaming-status {
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.streaming-status::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-left: 8px;
+  border: 2px solid #007bff;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.streaming-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.streaming-step {
+  font-size: 14px;
+  color: #666;
+  padding: 4px 0;
+}
+
+.step-name {
+  font-weight: 500;
+  color: #333;
 }
