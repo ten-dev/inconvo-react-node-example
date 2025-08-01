@@ -11,15 +11,18 @@ const Assistant = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingSteps, setStreamingSteps] = useState([]);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   
   const { conversationId, createNewConversation } = useConversation();
   const { sendMessage } = useMessage();
 
   const handleNewConversation = async () => {
+    setIsCreatingConversation(true);
     setMessage("");
     setMessages([]);
     setStreamingSteps([]);
     await createNewConversation();
+    setIsCreatingConversation(false);
   };
 
   const handleSubmit = async (e) => {
@@ -62,7 +65,9 @@ const Assistant = () => {
   return (
     <div>
       <div style={{ textAlign: "center" }}>
-        <button onClick={handleNewConversation}>New conversation</button>
+        <button onClick={handleNewConversation} disabled={isCreatingConversation}>
+          {isCreatingConversation ? "Creating..." : "New conversation"}
+        </button>
         <button 
           onClick={() => setStreamingEnabled(!streamingEnabled)}
           style={{ marginLeft: "10px" }}
