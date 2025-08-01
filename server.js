@@ -2,7 +2,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
-import Inconvo from "inconvo";
+import Inconvo from "@inconvoai/node";
 
 dotenv.config();
 const app = express();
@@ -49,49 +49,28 @@ app.post("/create-response", async (req, res, next) => {
   const { message, conversationId, stream = false } = req.body;
 
   try {
-    if (stream) {
-      // Set headers for Server-Sent Events
-      res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "Access-Control-Allow-Origin": "http://localhost:3232",
-        "Access-Control-Allow-Headers": "Cache-Control",
-      });
+    const response = client.conversations.response.create(conversationId, {
+      message,
+      stream,
+    });
 
-      const streamResponse = client.conversations.response.create(
-        conversationId,
-        {
-          message: message,
-          stream: true,
-        }
-      );
+    if (!stream) return res.json(await response);
 
-      try {
-        for await (const chunk of streamResponse) {
-          console.log(chunk);
-          // Format the response objects as Server-Sent Events
-          const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
-          res.write(sseMessage);
-        }
-        // Send the done event
-        res.write("data: [DONE]\n\n");
-        res.end();
-      } catch (error) {
-        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-        res.end();
-      }
-    } else {
-      const response = await client.conversations.response.create(
-        conversationId,
-        {
-          message: message,
-        }
-      );
-      return res.json(response);
+    // SSE headers
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    for await (const chunk of response) {
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
     }
+    
+    res.write("data: [DONE]\n\n");
+    res.end();
   } catch (error) {
-    if (stream) {
+    if (stream && res.headersSent) {
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
       res.end();
     } else {

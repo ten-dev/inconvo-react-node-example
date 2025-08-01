@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@inconvoai/node": "^0.0.1-alpha.1",
     "chart.js": "^4.5.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "inconvo": "github:stainless-sdks/inconvo-typescript",
     "react": "^19.1.1",
     "react-chartkick": "^0.5.4",
     "react-dom": "^19.1.1"
@@ -24,8 +24,8 @@
     "start-client": "vite --port 3232",
     "start-server": "node server.js",
     "build": "vite build",
-    "test": "vitest",
     "preview": "vite preview",
+    "dev": "concurrently \"npm run start-client\" \"npm run start-server\"",
     "start": "concurrently \"npm run start-client\" \"npm run start-server\"",
     "postinstall": "patch-package"
   },
