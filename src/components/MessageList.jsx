@@ -1,6 +1,6 @@
 import MessageRenderer from "./MessageRenderer";
 
-const MessageList = ({ messages, isStreaming, streamingSteps }) => (
+const MessageList = ({ messages }) => (
   <section>
     {messages.map((msg, index) => (
       <div key={index} className="message-response-pair">
@@ -13,15 +13,6 @@ const MessageList = ({ messages, isStreaming, streamingSteps }) => (
         </div>
       </div>
     ))}
-    {isStreaming && (
-      <div className="response-container">
-        <MessageRenderer 
-          response={{}} 
-          isStreaming={isStreaming} 
-          streamingSteps={streamingSteps} 
-        />
-      </div>
-    )}
   </section>
 );
 

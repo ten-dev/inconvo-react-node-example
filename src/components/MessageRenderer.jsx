@@ -1,19 +1,6 @@
 import { BarChart, LineChart } from "react-chartkick";
 import "chartkick/chart.js";
 
-const StreamingStatus = ({ streamingSteps }) => (
-  <div className="streaming-container">
-    <div className="streaming-status">Processing...</div>
-    <div className="streaming-steps">
-      {streamingSteps.map((step, index) => (
-        <div key={index} className="streaming-step">
-            {step.message}
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
 const TableRenderer = ({ response }) => (
   <table>
     <caption>{response.message}</caption>
@@ -58,11 +45,7 @@ const ChartRenderer = ({ response }) => {
   );
 };
 
-const MessageRenderer = ({ response, isStreaming, streamingSteps }) => {
-  if (isStreaming) {
-    return <StreamingStatus streamingSteps={streamingSteps} />;
-  }
-
+const MessageRenderer = ({ response }) => {
   if (!response || Object.keys(response).length === 0) {
     return <div>Send a message to see a response here</div>;
   }

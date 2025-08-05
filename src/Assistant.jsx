@@ -2,25 +2,79 @@ import { useState } from "react";
 import "./App.css";
 import MessageInput from "./components/MessageInput";
 import MessageList from "./components/MessageList";
-import useConversation from "./hooks/useConversation";
-import useMessage from "./hooks/useMessage";
 
 const Assistant = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingSteps, setStreamingSteps] = useState([]);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
-  
-  const { conversationId, createNewConversation } = useConversation();
-  const { sendMessage } = useMessage();
+  const [conversationId, setConversationId] = useState(null);
+
+  const createNewConversation = async () => {
+    setConversationId(null);
+    try {
+      const res = await fetch(`http://localhost:4242/create-conversation`, {
+        method: "POST",
+      });
+      const conversation = await res.json();
+      setConversationId(conversation.id);
+      return conversation.id;
+    } catch (err) {
+      console.error("Error creating conversation:", err);
+      return null;
+    }
+  };
+
+  const sendMessage = async (userMessage, conversationId, options = {}) => {
+    const { stream = false, onUpdate } = options;
+    
+    const response = await fetch(`http://localhost:4242/create-response`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(stream && { Accept: "text/event-stream" }),
+      },
+      body: JSON.stringify({ message: userMessage, conversationId, stream }),
+    });
+
+    if (!stream) return response.json();
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          
+          const data = line.slice(6);
+          if (data === "[DONE]") return;
+          
+          try {
+            onUpdate(JSON.parse(data));
+          } catch (e) {
+            console.error("Parse error:", e);
+          }
+        }
+      }
+    } catch (error) {
+      onUpdate({ type: "error", error });
+    }
+  };
 
   const handleNewConversation = async () => {
     setIsCreatingConversation(true);
     setMessage("");
     setMessages([]);
-    setStreamingSteps([]);
     await createNewConversation();
     setIsCreatingConversation(false);
   };
@@ -36,20 +90,41 @@ const Assistant = () => {
     try {
       if (streamingEnabled) {
         setIsStreaming(true);
-        setStreamingSteps([]);
+        
+        // Add temporary "thinking..." message
+        const tempMessageId = `temp-${Date.now()}`;
+        setMessages(prev => [...prev, { 
+          message: "Thinking...", 
+          type: "text",
+          id: tempMessageId 
+        }]);
         
         await sendMessage(userMessage, conversationId, {
           stream: true,
           onUpdate: (data) => {
-            if (data.type === "agent_step") {
-              setStreamingSteps(prev => [...prev, { step: data.step, message: data.message }]);
-            } else if (data.type === "completed") {
-              setMessages(prev => [...prev, { ...data.response, id: data.id }]);
+            if (data.type === "response.agent_step") {
+              // Update the temporary message with the agent step message
+              setMessages(prev => 
+                prev.map(msg => 
+                  msg.id === tempMessageId 
+                    ? { ...msg, message: data.message }
+                    : msg
+                )
+              );
+            } else if (data.type === "response.completed") {
+              // Replace the temporary message with the final response
+              setMessages(prev => 
+                prev.map(msg => 
+                  msg.id === tempMessageId 
+                    ? { ...data.response, id: data.id }
+                    : msg
+                )
+              );
               setIsStreaming(false);
-              setStreamingSteps([]);
             } else if (data.type === "error") {
+              // Remove the temporary message on error
+              setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
               setIsStreaming(false);
-              setStreamingSteps([]);
             }
           }
         });
@@ -81,8 +156,6 @@ const Assistant = () => {
       
       <MessageList 
         messages={messages}
-        isStreaming={isStreaming}
-        streamingSteps={streamingSteps}
       />
       
       <MessageInput
