@@ -1,191 +1,170 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import "./App.css";
-import { BarChart, LineChart } from "react-chartkick";
-import "chartkick/chart.js";
-
-const MessageInput = ({ message, setMessage, isLoading, conversationId }) => {
-  const handleChange = (e) => {
-    setMessage(e.target.value);
-  };
-
-  return (
-    <label>
-      Enter message:
-      <input
-        id="message"
-        type="text"
-        disabled={!conversationId || isLoading}
-        value={message}
-        onChange={handleChange}
-        placeholder={
-          conversationId
-            ? "What is our most popular product?"
-            : "Start a new conversation"
-        }
-      />
-    </label>
-  );
-};
-
-const ResponseOutput = ({ response }) => {
-  if (!response || Object.keys(response).length === 0) {
-    return <div>Send a message to see a response here</div>;
-  }
-
-  switch (response.type) {
-    case "text":
-      return <div>{response.message}</div>;
-
-    case "table":
-      return (
-        <table>
-          <caption>{response.message}</caption>
-          <thead>
-            <tr>
-              {response.table.head.map((h, i) => (
-                <th key={i}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {response.table.body.map((row, i) => (
-              <tr key={i}>
-                {row.map((cell, j) => (
-                  <td key={j}>{cell}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      );
-
-    case "chart": {
-      const data = response.chart.data.map((item) => [item.label, item.value]);
-      switch (response.chart.type) {
-        case "bar":
-          return (
-            <div className="chart-container">
-              <div>{response.message}</div>
-              <BarChart data={data} round={2} thousands="," width="400px" />
-            </div>
-          );
-        case "line":
-          return (
-            <div className="chart-container">
-              <div>{response.message}</div>
-              <LineChart data={data} round={2} thousands="," width="400px" />
-            </div>
-          );
-        default:
-          return <div>Unsupported chart type</div>;
-      }
-    }
-
-    default:
-      return <div>Unsupported response type</div>;
-  }
-};
+import MessageInput from "./components/MessageInput";
+import MessageList from "./components/MessageList";
 
 const Assistant = () => {
   const [message, setMessage] = useState("");
-  const [messageResponsePairs, setMessageResponsePairs] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingEnabled, setStreamingEnabled] = useState(true);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [conversationId, setConversationId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   const createNewConversation = async () => {
     setConversationId(null);
-    setMessage("");
-    setMessageResponsePairs([]);
     try {
       const res = await fetch(`http://localhost:4242/create-conversation`, {
         method: "POST",
       });
       const conversation = await res.json();
       setConversationId(conversation.id);
+      return conversation.id;
     } catch (err) {
       console.error("Error creating conversation:", err);
+      return null;
     }
+  };
+
+  const sendMessage = async (userMessage, conversationId, options = {}) => {
+    const { stream = false, onUpdate } = options;
+    
+    const response = await fetch(`http://localhost:4242/create-response`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(stream && { Accept: "text/event-stream" }),
+      },
+      body: JSON.stringify({ message: userMessage, conversationId, stream }),
+    });
+
+    if (!stream) return response.json();
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          
+          const data = line.slice(6);
+          if (data === "[DONE]") return;
+          
+          try {
+            onUpdate(JSON.parse(data));
+          } catch (e) {
+            console.error("Parse error:", e);
+          }
+        }
+      }
+    } catch (error) {
+      onUpdate({ type: "error", error });
+    }
+  };
+
+  const handleNewConversation = async () => {
+    setIsCreatingConversation(true);
+    setMessage("");
+    setMessages([]);
+    await createNewConversation();
+    setIsCreatingConversation(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-
+    if (!message.trim()) return;
+    
+    const userMessage = message;
+    setMessage("");
+    setMessages(prev => [...prev, { message: userMessage, timestamp: Date.now() }]);
+    
     try {
-      console.log("Submitting message:", message);
-      console.log("Payload:", {
-        message,
-        ...(conversationId ? { conversationId } : {}),
-      });
-      const res = await fetch(`http://localhost:4242/create-response`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message,
-          ...(conversationId ? { conversationId } : {}),
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server responded with status: ${res.status}`);
+      if (streamingEnabled) {
+        setIsStreaming(true);
+        
+        // Add temporary "thinking..." message
+        const tempMessageId = `temp-${Date.now()}`;
+        setMessages(prev => [...prev, { 
+          message: "Thinking...", 
+          type: "text",
+          id: tempMessageId 
+        }]);
+        
+        await sendMessage(userMessage, conversationId, {
+          stream: true,
+          onUpdate: (data) => {
+            if (data.type === "response.agent_step") {
+              // Update the temporary message with the agent step message
+              setMessages(prev => 
+                prev.map(msg => 
+                  msg.id === tempMessageId 
+                    ? { ...msg, message: data.message }
+                    : msg
+                )
+              );
+            } else if (data.type === "response.completed") {
+              // Replace the temporary message with the final response
+              setMessages(prev => 
+                prev.map(msg => 
+                  msg.id === tempMessageId 
+                    ? { ...data.response, id: data.id }
+                    : msg
+                )
+              );
+              setIsStreaming(false);
+            } else if (data.type === "error") {
+              // Remove the temporary message on error
+              setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+              setIsStreaming(false);
+            }
+          }
+        });
+      } else {
+        const response = await sendMessage(userMessage, conversationId);
+        setMessages(prev => [...prev, { ...response.response, id: response.id }]);
       }
-
-      const data = await res.json();
-      console.log("Response data:", data);
-
-      if (data.conversationId && !conversationId) {
-        setConversationId(data.conversationId);
-      }
-
-      setMessageResponsePairs((prevMessageResponsePairs) => [
-        ...prevMessageResponsePairs,
-        { message, response: data },
-      ]);
-    } catch (err) {
-      console.error("Error submitting message:", err);
-    } finally {
-      setIsLoading(false);
-      setMessage("");
+    } catch (error) {
+      console.error("Request error:", error);
     }
   };
 
   return (
     <div>
       <div style={{ textAlign: "center" }}>
-        <button onClick={createNewConversation}>New conversation</button>
+        <button onClick={handleNewConversation} disabled={isCreatingConversation}>
+          {isCreatingConversation ? "Creating..." : "New conversation"}
+        </button>
+        <button 
+          onClick={() => setStreamingEnabled(!streamingEnabled)}
+          style={{ marginLeft: "10px" }}
+        >
+          {streamingEnabled ? "Disable" : "Enable"} Streaming
+        </button>
         {conversationId && (
           <div className="conversation-id">{conversationId}</div>
         )}
       </div>
-      <section>
-        {messageResponsePairs.length > 0 && (
-          <div className="conversation-history">
-            {messageResponsePairs.map((messageResponsePair, index) => (
-              <div key={index} className="message-response-pair">
-                <div className="message-container">
-                  <p className="message">{messageResponsePair.message}</p>
-                </div>
-                <div className="response-container">
-                  <ResponseOutput response={messageResponsePair.response} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-      <form onSubmit={handleSubmit}>
-        <MessageInput
-          message={message}
-          setMessage={setMessage}
-          isLoading={isLoading}
-          conversationId={conversationId}
-        />
-        <button disabled={isLoading || !conversationId} id="submit">
-          {isLoading ? `Thinking ...` : `Submit`}
-        </button>
-      </form>
+      
+      <MessageList 
+        messages={messages}
+      />
+      
+      <MessageInput
+        message={message}
+        setMessage={setMessage}
+        conversationId={conversationId}
+        onSubmit={handleSubmit}
+        isStreaming={isStreaming}
+      />
     </div>
   );
 };
