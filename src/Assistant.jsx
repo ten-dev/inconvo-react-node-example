@@ -26,8 +26,6 @@ const Assistant = () => {
             );
             if (stringValues.length) {
               message = stringValues.join(", ");
-            } else if (typeof data.message === "string") {
-              message = data.message;
             }
           }
         } catch {
