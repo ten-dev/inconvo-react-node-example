@@ -1,6 +1,11 @@
 import { BarChart, LineChart } from "react-chartkick";
 import "chartkick/chart.js";
 
+/**
+ * @typedef {import('@inconvoai/node/resources/conversations/response').ResponseCreateResponse} ResponseCreateResponse
+ * @typedef {import('@inconvoai/node/resources/conversations/response').Chart} InconvoChart
+ */
+
 const TableRenderer = ({ response }) => (
   <table>
     <caption>{response.message}</caption>
@@ -23,28 +28,60 @@ const TableRenderer = ({ response }) => (
   </table>
 );
 
+/**
+ * @param {{ response: ResponseCreateResponse }} props
+ */
 const ChartRenderer = ({ response }) => {
-  const data = response.chart.data.map((item) => [item.label, item.value]);
-  
+  const chart = /** @type {InconvoChart | undefined} */ (response.chart);
+  const labels = Array.isArray(chart?.data?.labels) ? chart.data.labels : [];
+  const datasets = Array.isArray(chart?.data?.datasets) ? chart.data.datasets : [];
+
+  if (!chart || !datasets.length || !labels.length) {
+    return <div>No chart data</div>;
+  }
+
+  const chartData =
+    datasets.length === 1
+      ? labels.map((label, index) => [
+          label,
+          typeof datasets[0].values[index] === "number" ? datasets[0].values[index] : 0,
+        ])
+      : datasets.map((dataset) => ({
+          name: dataset.name,
+          data: labels.reduce((acc, label, index) => {
+            const value = dataset.values[index];
+            if (typeof value === "number") {
+              acc[label] = value;
+            }
+            return acc;
+          }, /** @type {Record<string, number>} */ ({})),
+        }));
+
   const chartProps = {
-    data,
+    data: chartData,
     round: 2,
     thousands: ",",
-    width: "400px"
+    width: "400px",
+    ...(chart.xLabel ? { xtitle: chart.xLabel } : {}),
+    ...(chart.yLabel ? { ytitle: chart.yLabel } : {}),
   };
 
   return (
     <div className="chart-container">
-      <div>{response.message}</div>
-      {response.chart.type === "bar" && <BarChart {...chartProps} />}
-      {response.chart.type === "line" && <LineChart {...chartProps} />}
-      {!["bar", "line"].includes(response.chart.type) && (
+      {response.message && <div>{response.message}</div>}
+      {chart.title && chart.title !== response.message && <div>{chart.title}</div>}
+      {chart.type === "bar" && <BarChart {...chartProps} />}
+      {chart.type === "line" && <LineChart {...chartProps} />}
+      {!["bar", "line"].includes(chart.type) && (
         <div>Unsupported chart type</div>
       )}
     </div>
   );
 };
 
+/**
+ * @param {{ response: Partial<ResponseCreateResponse> }} props
+ */
 const MessageRenderer = ({ response }) => {
   if (!response || Object.keys(response).length === 0) {
     return <div>Send a message to see a response here</div>;
