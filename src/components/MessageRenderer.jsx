@@ -68,8 +68,8 @@ const ChartRenderer = ({ response }) => {
 
   return (
     <div className="chart-container">
-      <div>{response.message || chart.title}</div>
-      {chart.title && response.message && <div>{chart.title}</div>}
+      {response.message && <div>{response.message}</div>}
+      {chart.title && chart.title !== response.message && <div>{chart.title}</div>}
       {chart.type === "bar" && <BarChart {...chartProps} />}
       {chart.type === "line" && <LineChart {...chartProps} />}
       {!["bar", "line"].includes(chart.type) && (
