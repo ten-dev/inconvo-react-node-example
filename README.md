@@ -1,4 +1,6 @@
-# Build an analytics assistant with the Inconvo Conversations API
+# See how to build an AI data analysis app with the Inconvo Conversations API
+
+<img width="1125" height="895" alt="image" src="https://github.com/user-attachments/assets/0b114135-257c-4ebd-a3b8-e331e63899a3" />
 
 ## Prerequisites
 

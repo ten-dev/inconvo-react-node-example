@@ -8,6 +8,11 @@ import embed from "vega-embed";
  * @typedef {import('@inconvoai/node/resources/conversations/response').Chart} InconvoChart
  */
 
+/**
+ * @typedef {import('@inconvoai/node/resources/conversations/response').ResponseCreateResponse} ResponseCreateResponse
+ * @typedef {import('@inconvoai/node/resources/conversations/response').Chart} InconvoChart
+ */
+
 const TableRenderer = ({ response }) => (
   <table>
     <caption>{response.message}</caption>
@@ -69,7 +74,9 @@ const VegaLiteRenderer = ({ spec }) => {
  * @param {{ response: ResponseCreateResponse }} props
  */
 const ChartRenderer = ({ response }) => {
-  const chart = /** @type {InconvoChart | undefined} */ (response.chart ?? response.spec);
+  const chart = /** @type {InconvoChart | undefined} */ (
+    response.chart ?? response.spec
+  );
 
   const parseIfJsonString = (value) => {
     if (typeof value !== "string") return null;

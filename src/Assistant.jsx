@@ -11,17 +11,56 @@ const Assistant = () => {
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [conversationId, setConversationId] = useState(null);
 
+  const alertResponseError = async (response) => {
+    let message = `Request failed (${response.status})`;
+    try {
+      const text = await response.text();
+      if (text) {
+        try {
+          const data = JSON.parse(text);
+          if (typeof data === "string") {
+            message = data;
+          } else if (data && typeof data === "object") {
+            const stringValues = Object.values(data).filter(
+              (value) => typeof value === "string"
+            );
+            if (stringValues.length) {
+              message = stringValues.join(", ");
+            }
+          }
+        } catch {
+          message = text;
+        }
+      }
+    } catch {
+      // Ignore parsing errors and fall back to the default message.
+    }
+    alert(message);
+    return message;
+  };
+
+  const alertNetworkError = (error) => {
+    const message = error?.message || "Request failed.";
+    alert(message);
+    return message;
+  };
+
   const createNewConversation = async () => {
     setConversationId(null);
     try {
       const res = await fetch(`http://localhost:4242/create-conversation`, {
         method: "POST",
       });
+      if (!res.ok) {
+        await alertResponseError(res);
+        return null;
+      }
       const conversation = await res.json();
       setConversationId(conversation.id);
       return conversation.id;
     } catch (err) {
       console.error("Error creating conversation:", err);
+      alertNetworkError(err);
       return null;
     }
   };
@@ -37,6 +76,13 @@ const Assistant = () => {
       },
       body: JSON.stringify({ message: userMessage, conversationId, stream }),
     });
+
+    if (!response.ok) {
+      const message = await alertResponseError(response);
+      const error = new Error(message);
+      error.alertAlreadyShown = true;
+      throw error;
+    }
 
     if (!stream) return response.json();
 
@@ -84,6 +130,7 @@ const Assistant = () => {
     if (!message.trim()) return;
     
     const userMessage = message;
+    let tempMessageId = null;
     setMessage("");
     setMessages(prev => [...prev, { message: userMessage, timestamp: Date.now() }]);
     
@@ -92,7 +139,7 @@ const Assistant = () => {
         setIsStreaming(true);
         
         // Add temporary "thinking..." message
-        const tempMessageId = `temp-${Date.now()}`;
+        tempMessageId = `temp-${Date.now()}`;
         setMessages(prev => [...prev, { 
           message: "Thinking...", 
           type: "text",
@@ -124,6 +171,12 @@ const Assistant = () => {
             } else if (data.type === "error") {
               // Remove the temporary message on error
               setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+              if (!data.error?.alertAlreadyShown) {
+                alertNetworkError(data.error);
+                if (data.error) {
+                  data.error.alertAlreadyShown = true;
+                }
+              }
               setIsStreaming(false);
             }
           }
@@ -134,6 +187,13 @@ const Assistant = () => {
       }
     } catch (error) {
       console.error("Request error:", error);
+      if (tempMessageId) {
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      }
+      setIsStreaming(false);
+      if (!error?.alertAlreadyShown) {
+        alertNetworkError(error);
+      }
     }
   };
 
