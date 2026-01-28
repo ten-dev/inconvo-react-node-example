@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import Inconvo from "@inconvoai/node";
+import { randomUUID } from "node:crypto";
 
 dotenv.config();
 const app = express();
@@ -16,7 +17,7 @@ const client = new Inconvo({
 app.use(
   cors({
     origin: "http://localhost:3232",
-  })
+  }),
 );
 
 app.use(express.static("public"));
@@ -36,9 +37,13 @@ app.post("/create-conversation", async (_req, res, next) => {
   };
 
   try {
-    const conversation = await client.conversations.create({
-      context: context,
-    });
+    const conversation = await client.agents.conversations.create(
+      process.env.INCONVO_AGENT_ID,
+      {
+        userIdentifier: randomUUID().toString(),
+        userContext: context,
+      },
+    );
     return res.json(conversation);
   } catch (error) {
     next(error);
@@ -49,10 +54,14 @@ app.post("/create-response", async (req, res, next) => {
   const { message, conversationId, stream = false } = req.body;
 
   try {
-    const response = client.conversations.response.create(conversationId, {
-      message,
-      stream,
-    });
+    const response = client.agents.conversations.response.create(
+      conversationId,
+      {
+        agentId: process.env.INCONVO_AGENT_ID,
+        message,
+        stream,
+      },
+    );
 
     if (!stream) return res.json(await response);
 
@@ -66,7 +75,7 @@ app.post("/create-response", async (req, res, next) => {
     for await (const chunk of response) {
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
     }
-    
+
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (error) {
@@ -78,51 +87,6 @@ app.post("/create-response", async (req, res, next) => {
     }
   }
 });
-
-// Create feedback endpoint
-app.post(
-  "/conversations/:conversationId/response/:responseId/feedback",
-  async (req, res, next) => {
-    const { conversationId, responseId } = req.params;
-    const { rating, comment } = req.body;
-
-    try {
-      const feedback = await client.conversations.response.feedback.create({
-        conversationId,
-        responseId,
-        rating,
-        comment,
-      });
-      res.json(feedback);
-    } catch (error) {
-      console.error("Error creating feedback:", error);
-      next(error); // Pass error to Express 5 error handler
-    }
-  }
-);
-
-// Update feedback endpoint
-app.patch(
-  "/conversations/:conversationId/response/:responseId/feedback/:feedbackId",
-  async (req, res, next) => {
-    const { conversationId, responseId, feedbackId } = req.params;
-    const { rating, comment } = req.body;
-
-    try {
-      const feedback = await client.conversations.response.feedback.update({
-        conversationId,
-        responseId,
-        feedbackId,
-        rating,
-        comment,
-      });
-      res.json(feedback);
-    } catch (error) {
-      console.error("Error updating feedback:", error);
-      next(error); // Pass error to Express 5 error handler
-    }
-  }
-);
 
 // Express 5 enhanced error handling middleware (must be after all routes)
 app.use((err, req, res, next) => {

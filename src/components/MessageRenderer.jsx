@@ -78,6 +78,9 @@ const ChartRenderer = ({ response }) => {
     response.chart ?? response.spec
   );
 
+  console.log("ChartRenderer - Full response:", response);
+  console.log("ChartRenderer - Chart object:", chart);
+
   const parseIfJsonString = (value) => {
     if (typeof value !== "string") return null;
     try {
@@ -112,10 +115,9 @@ const ChartRenderer = ({ response }) => {
       if (
         candidate &&
         typeof candidate === "object" &&
-        typeof candidate.type === "string" &&
-        candidate.type.toLowerCase().includes("vega") &&
         typeof candidate.data === "object" &&
-        typeof candidate.encoding === "object"
+        typeof candidate.encoding === "object" &&
+        (candidate.mark || candidate.layer || candidate.concat)
       ) {
         // Treat well-formed Vega-Lite shapes missing $schema as Vega-Lite.
         return {
@@ -144,7 +146,16 @@ const ChartRenderer = ({ response }) => {
     ? chart.data.datasets
     : [];
 
+  console.log("ChartRenderer - Labels:", labels);
+  console.log("ChartRenderer - Datasets:", datasets);
+  console.log("ChartRenderer - chart.data:", chart?.data);
+
   if (!chart || !datasets.length || !labels.length) {
+    console.log("ChartRenderer - No chart data condition met:", {
+      hasChart: !!chart,
+      datasetsLength: datasets.length,
+      labelsLength: labels.length,
+    });
     return <div>No chart data</div>;
   }
 
